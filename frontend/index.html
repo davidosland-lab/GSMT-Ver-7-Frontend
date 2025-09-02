@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSMT Ver 7.0 - Global Stock Market Tracker</title>
+    <meta name="description" content="Clean architecture stock market tracker with percentage-based analysis">
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 'inter': ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' },
+                        success: { 500: '#10b981', 600: '#059669' },
+                        danger: { 500: '#ef4444', 600: '#dc2626' }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="font-inter bg-gray-50 min-h-screen">
+    
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-primary-900">
+                        <i class="fas fa-chart-line mr-2 text-primary-600"></i>
+                        GSMT Ver 7.0
+                    </h1>
+                    <div class="hidden md:block ml-6">
+                        <span class="text-sm text-gray-600">Clean Architecture • Global Markets</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div id="api-status" class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                        <span class="text-xs text-gray-500">Connecting...</span>
+                    </div>
+                    <button id="settings-btn" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Application -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <!-- Control Panel -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-sliders-h mr-2"></i>Analysis Configuration
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <!-- Symbol Search -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Symbols</label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="symbol-search" 
+                            placeholder="Search stocks, indices..." 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        >
+                        <div id="symbol-suggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden mt-1">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Time Period -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Time Period</label>
+                    <select id="time-period" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        <option value="24h">24 Hours</option>
+                        <option value="3d">3 Days</option>
+                        <option value="1w">1 Week</option>
+                        <option value="2w">2 Weeks</option>
+                        <option value="1M">1 Month</option>
+                        <option value="3M">3 Months</option>
+                        <option value="6M">6 Months</option>
+                        <option value="1Y">1 Year</option>
+                        <option value="2Y">2 Years</option>
+                    </select>
+                </div>
+                
+                <!-- Chart Type -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Chart Type</label>
+                    <select id="chart-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        <option value="percentage">Percentage Change</option>
+                        <option value="price">Absolute Price</option>
+                        <option value="candlestick">Candlestick</option>
+                    </select>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex flex-col space-y-2">
+                    <button id="analyze-btn" class="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                        <i class="fas fa-chart-area mr-2"></i>Analyze
+                    </button>
+                    <button id="clear-btn" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-trash mr-2"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Selected Symbols -->
+        <section id="selected-symbols" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 hidden">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-md font-medium text-gray-900">
+                    <i class="fas fa-layer-group mr-2"></i>Selected Symbols
+                </h3>
+                <span id="symbol-count" class="text-sm text-gray-500">0 symbols</span>
+            </div>
+            <div id="symbol-chips" class="flex flex-wrap gap-2">
+                <!-- Symbol chips will be populated here -->
+            </div>
+        </section>
+
+        <!-- Chart Section -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-gray-900">
+                    <i class="fas fa-chart-line mr-2"></i>Market Analysis
+                </h2>
+                <div class="flex items-center space-x-3">
+                    <div id="loading-indicator" class="hidden flex items-center space-x-2">
+                        <div class="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                        <span class="text-sm text-gray-600">Loading...</span>
+                    </div>
+                    <button id="fullscreen-btn" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="main-chart" class="w-full" style="height: 500px;">
+                <div class="flex items-center justify-center h-full text-gray-400">
+                    <div class="text-center">
+                        <i class="fas fa-chart-line text-5xl mb-4 text-gray-300"></i>
+                        <p class="text-lg font-medium">Select symbols to begin analysis</p>
+                        <p class="text-sm mt-2">Search and select stocks or indices to compare</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Performance Summary -->
+        <section id="performance-summary" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hidden">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-trophy mr-2"></i>Performance Summary
+            </h3>
+            <div id="performance-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Performance cards will be populated here -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl max-w-md w-full p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Settings</h3>
+                    <button id="close-settings" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">API Base URL</label>
+                        <input 
+                            type="text" 
+                            id="api-url" 
+                            placeholder="https://your-api.railway.app" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                        <p class="text-xs text-gray-500 mt-1">Enter your Railway backend URL</p>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" id="auto-refresh" class="mr-2">
+                        <label class="text-sm font-medium text-gray-700">Enable auto-refresh</label>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Refresh Interval</label>
+                        <select id="refresh-interval" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                            <option value="30">30 seconds</option>
+                            <option value="60">1 minute</option>
+                            <option value="300">5 minutes</option>
+                            <option value="900">15 minutes</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button id="cancel-settings" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+                        Cancel
+                    </button>
+                    <button id="save-settings" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                        Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2">
+        <!-- Toasts will be inserted here -->
+    </div>
+
+    <!-- JavaScript Application -->
+    <script src="js/app.js"></script>
+</body>
+</html>
